@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyBeat Room</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="bg-gray-950 text-white min-h-screen p-6 font-sans">
+  <div class="max-w-5xl mx-auto text-center">
+    <header class="mb-8">
+      <h1 class="text-4xl font-extrabold text-green-400 mb-2">🎧 StudyBeat Room</h1>
+      <p class="text-gray-400">ฟังเพลงไปพร้อมกับเพื่อนๆ แบบ Real-time</p>
+    </header>
+
+    <div id="login-section" class="mb-10">
+      <a href="/login" class="bg-green-500 hover:bg-green-600 text-black font-bold py-3.5 px-8 rounded-full shadow-lg transition transform hover:scale-105 inline-block">
+        Connect with Spotify
+      </a>
+    </div>
+
+    <!-- Grid สำหรับการ์ดผู้ใช้ -->
+    <div id="users-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+  </div>
+
+  <script>
+    const socket = io();
+
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    const token = getCookie('spotify_access_token');
+
+    if (token) {
+      document.getElementById('login-section').style.display = 'none';
+      socket.emit('register_user', token);
+    }
+
+    socket.on('update_users', (users) => {
+      const grid = document.getElementById('users-grid');
+      grid.innerHTML = '';
+
+      const userKeys = Object.keys(users);
+      if (userKeys.length === 0) {
+        grid.innerHTML = '<p class="col-span-full text-gray-500">ยังไม่มีใครเข้ามาในห้อง</p>';
+        return;
+      }
+
+      userKeys.forEach(id => {
+        const user = users[id];
+        const card = document.createElement('div');
+        card.className = 'bg-gray-900 border border-gray-800 p-5 rounded-2xl flex flex-col items-center shadow-md relative overflow-hidden';
+
+        const songHTML = user.song ? `
+          <div class="relative group my-3">
+            <img src="${user.song.albumCover}" class="w-28 h-28 rounded-xl shadow-lg transition transform group-hover:scale-105">
+            <span class="absolute bottom-1 right-1 bg-green-500 w-3.5 h-3.5 rounded-full border-2 border-gray-900 animate-ping"></span>
+          </div>
+          <p class="font-bold text-green-400 text-base line-clamp-1 w-full">${user.song.title}</p>
+          <p class="text-xs text-gray-400 line-clamp-1 w-full mt-0.5">${user.song.artist}</p>
+        ` : `
+          <div class="w-28 h-28 bg-gray-800 rounded-xl my-3 flex items-center justify-center text-gray-600 text-2xl">
+            ⏸️
+          </div>
+          <p class="text-gray-500 text-xs">ไม่ได้เปิดเพลง</p>
+        `;
+
+        card.innerHTML = `
+          <img src="${user.avatar}" class="w-14 h-14 rounded-full border-2 border-green-500 mb-2 object-cover">
+          <h3 class="font-bold text-lg text-gray-200 line-clamp-1">${user.name}</h3>
+          ${songHTML}
+        `;
+
+        grid.appendChild(card);
+      });
+    });
+  </script>
+</body>
+</html>
